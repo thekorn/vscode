@@ -30,7 +30,7 @@ import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
 import { BreadcrumbsConfig } from 'vs/workbench/browser/parts/editor/breadcrumbs';
 import { BreadcrumbsControl, IBreadcrumbsControlOptions } from 'vs/workbench/browser/parts/editor/breadcrumbsControl';
 import { IEditorGroupsAccessor, IEditorGroupTitleHeight, IEditorGroupView } from 'vs/workbench/browser/parts/editor/editor';
-import { IEditorCommandsContext, IEditorInput, EditorResourceAccessor, IEditorPartOptions, SideBySideEditor, ActiveEditorPinnedContext, ActiveEditorStickyContext, EditorsOrder } from 'vs/workbench/common/editor';
+import { IEditorCommandsContext, IEditorInput, EditorResourceAccessor, IEditorPartOptions, SideBySideEditor, ActiveEditorPinnedContext, ActiveEditorStickyContext, EditorsOrder, ActiveEditorGroupLockedContext } from 'vs/workbench/common/editor';
 import { ResourceContextKey } from 'vs/workbench/common/resources';
 import { AnchorAlignment } from 'vs/base/browser/ui/contextview/contextview';
 import { IFileService } from 'vs/platform/files/common/files';
@@ -80,8 +80,11 @@ export abstract class TitleControl extends Themable {
 	private editorActionsToolbar: ToolBar | undefined;
 
 	private resourceContext: ResourceContextKey;
+
 	private editorPinnedContext: IContextKey<boolean>;
 	private editorStickyContext: IContextKey<boolean>;
+
+	private groupLockedContext: IContextKey<boolean>;
 
 	private readonly editorToolBarMenuDisposables = this._register(new DisposableStore());
 
@@ -106,8 +109,11 @@ export abstract class TitleControl extends Themable {
 		super(themeService);
 
 		this.resourceContext = this._register(instantiationService.createInstance(ResourceContextKey));
+
 		this.editorPinnedContext = ActiveEditorPinnedContext.bindTo(contextKeyService);
 		this.editorStickyContext = ActiveEditorStickyContext.bindTo(contextKeyService);
+
+		this.groupLockedContext = ActiveEditorGroupLockedContext.bindTo(contextKeyService);
 
 		this.contextMenu = this._register(this.menuService.createMenu(MenuId.EditorTitleContext, this.contextKeyService));
 
@@ -222,8 +228,11 @@ export abstract class TitleControl extends Themable {
 		// Update contexts
 		this.contextKeyService.bufferChangeEvents(() => {
 			this.resourceContext.set(withUndefinedAsNull(EditorResourceAccessor.getOriginalUri(this.group.activeEditor, { supportSideBySide: SideBySideEditor.PRIMARY })));
+
 			this.editorPinnedContext.set(this.group.activeEditor ? this.group.isPinned(this.group.activeEditor) : false);
 			this.editorStickyContext.set(this.group.activeEditor ? this.group.isSticky(this.group.activeEditor) : false);
+
+			this.groupLockedContext.set(this.group.isLocked);
 		});
 
 		// Editor actions require the editor control to be there, so we retrieve it via service
@@ -239,8 +248,12 @@ export abstract class TitleControl extends Themable {
 			const shouldInlineGroup = (action: SubmenuAction, group: string) => group === 'navigation' && action.actions.length <= 1;
 
 			this.editorToolBarMenuDisposables.add(createAndFillInActionBarActions(
-				titleBarMenu, { arg: this.resourceContext.get(), shouldForwardArgs: true }, { primary, secondary },
-				'navigation', 9, shouldInlineGroup
+				titleBarMenu,
+				{ arg: this.resourceContext.get(), shouldForwardArgs: true },
+				{ primary, secondary },
+				'navigation',
+				9,
+				shouldInlineGroup
 			));
 		}
 
@@ -319,6 +332,8 @@ export abstract class TitleControl extends Themable {
 		this.editorPinnedContext.set(this.group.isPinned(editor));
 		const currentStickyContext = !!this.editorStickyContext.get();
 		this.editorStickyContext.set(this.group.isSticky(editor));
+		const currentGroupLockedContext = !!this.groupLockedContext.get();
+		this.groupLockedContext.set(this.group.isLocked);
 
 		// Find target anchor
 		let anchor: HTMLElement | { x: number, y: number } = node;
@@ -343,6 +358,7 @@ export abstract class TitleControl extends Themable {
 				this.resourceContext.set(currentResourceContext || null);
 				this.editorPinnedContext.set(currentPinnedContext);
 				this.editorStickyContext.set(currentStickyContext);
+				this.groupLockedContext.set(currentGroupLockedContext);
 
 				// restore focus to active group
 				this.accessor.activeGroup.focus();
