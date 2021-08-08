@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event, Emitter } from 'vs/base/common/event';
-import { IEditorFactoryRegistry, IEditorIdentifier, IEditorCloseEvent, GroupIdentifier, IEditorInput, EditorsOrder, EditorExtensions, IUntypedEditorInput } from 'vs/workbench/common/editor';
+import { IEditorFactoryRegistry, IEditorIdentifier, IEditorCloseEvent, GroupIdentifier, IEditorInput, EditorsOrder, EditorExtensions, IUntypedEditorInput, EditorInputCapabilities } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { SideBySideEditorInput } from 'vs/workbench/common/editor/sideBySideEditorInput';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -188,6 +188,7 @@ export class EditorGroupModel extends Disposable {
 		const makeSticky = options?.sticky || (typeof options?.index === 'number' && this.isSticky(options.index));
 		const makePinned = options?.pinned || options?.sticky;
 		const makeActive = options?.active || !this.activeEditor || (!makePinned && this.matches(this.preview, this.activeEditor));
+		const makeLocked = this.count === 0 && candidate.hasCapability(EditorInputCapabilities.Exclusive);
 
 		const existingEditorAndIndex = this.findEditor(candidate);
 
@@ -282,6 +283,11 @@ export class EditorGroupModel extends Disposable {
 			// Handle active
 			if (makeActive) {
 				this.doSetActive(newEditor);
+			}
+
+			// Handle locked
+			if (makeLocked) {
+				this.setLocked(true);
 			}
 
 			return {

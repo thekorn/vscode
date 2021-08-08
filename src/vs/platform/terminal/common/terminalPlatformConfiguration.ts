@@ -365,6 +365,11 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 			description: localize('terminal.integrated.showLinkHover', "Whether to show hovers for links in the terminal output."),
 			type: 'boolean',
 			default: true
+		},
+		[TerminalSettingId.LockEditorGroup]: {
+			description: localize('terminal.integrated.lockEditorGroup', "Whether to lock the editor group a terminal opens in when a editor group is created for the terminal. Locked editor groups will not be used for opening any editors unless explicitly decided by the user and thus allows for a more stable editor layout."),
+			type: 'boolean',
+			default: false
 		}
 	}
 };

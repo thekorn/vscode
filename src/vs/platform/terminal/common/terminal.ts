@@ -91,6 +91,7 @@ export const enum TerminalSettingId {
 	EnablePersistentSessions = 'terminal.integrated.enablePersistentSessions',
 	InheritEnv = 'terminal.integrated.inheritEnv',
 	ShowLinkHover = 'terminal.integrated.showLinkHover',
+	LockEditorGroup = 'terminal.integrated.lockEditorGroup'
 }
 
 export enum WindowsShellType {

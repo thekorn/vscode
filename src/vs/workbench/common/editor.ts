@@ -448,6 +448,12 @@ export const enum EditorInputCapabilities {
 	 * Signals that the input requires workspace trust.
 	 */
 	RequiresTrust = 1 << 4,
+
+	/**
+	 * Signals that the input is typically not shared with
+	 * other inputs in a group.
+	 */
+	Exclusive = 1 << 5
 }
 
 export type IUntypedEditorInput = IResourceEditorInput | ITextResourceEditorInput | IUntitledTextResourceEditorInput | IResourceDiffEditorInput;

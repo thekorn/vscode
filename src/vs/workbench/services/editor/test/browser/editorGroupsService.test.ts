@@ -1345,7 +1345,7 @@ suite('EditorGroupsService', () => {
 		moveListener.dispose();
 	});
 
-	test('locked groups', async () => {
+	test('locked groups - basics', async () => {
 		const [part] = await createPart();
 		const group = part.activeGroup;
 
@@ -1411,5 +1411,25 @@ suite('EditorGroupsService', () => {
 		partListener.dispose();
 		leftGroupListener.dispose();
 		rightGroupListener.dispose();
+	});
+
+	test('locked groups - via EditorInputCapability.Exclusive', async () => {
+		const [part] = await createPart();
+		const group = part.activeGroup;
+
+		const input1 = new TestFileEditorInput(URI.file('foo/bar1'), TEST_EDITOR_INPUT_ID);
+		input1.capabilities = input1.capabilities | EditorInputCapabilities.Exclusive;
+
+		const input2 = new TestFileEditorInput(URI.file('foo/bar2'), TEST_EDITOR_INPUT_ID);
+		input2.capabilities = input2.capabilities | EditorInputCapabilities.Exclusive;
+
+		await group.openEditor(input1);
+		assert.strictEqual(group.isLocked, true);
+
+		group.setLocked(false);
+		assert.strictEqual(group.isLocked, false);
+
+		await group.openEditor(input2);
+		assert.strictEqual(group.isLocked, false);
 	});
 });

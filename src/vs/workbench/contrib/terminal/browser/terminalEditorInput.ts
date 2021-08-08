@@ -5,7 +5,7 @@
 
 import { dispose, toDisposable } from 'vs/base/common/lifecycle';
 import { URI } from 'vs/base/common/uri';
-import { IEditorInput, IUntypedEditorInput } from 'vs/workbench/common/editor';
+import { EditorInputCapabilities, IEditorInput, IUntypedEditorInput } from 'vs/workbench/common/editor';
 import { IThemeService, ThemeIcon } from 'vs/platform/theme/common/themeService';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { ITerminalInstance, ITerminalInstanceService } from 'vs/workbench/contrib/terminal/browser/terminal';
@@ -33,6 +33,11 @@ export class TerminalEditorInput extends EditorInput {
 	private _isReverted = false;
 	private _copyLaunchConfig?: IShellLaunchConfig;
 	private _terminalEditorFocusContextKey: IContextKey<boolean>;
+
+	private _capabilities: EditorInputCapabilities;
+	override get capabilities(): EditorInputCapabilities {
+		return this._capabilities;
+	}
 
 	private _group: IEditorGroup | undefined;
 
@@ -118,11 +123,14 @@ export class TerminalEditorInput extends EditorInput {
 		super();
 
 		this._terminalEditorFocusContextKey = TerminalContextKeys.editorFocus.bindTo(_contextKeyService);
+		this._capabilities = _configurationService.getValue(TerminalSettingId.LockEditorGroup) ? (EditorInputCapabilities.Exclusive | EditorInputCapabilities.Readonly) : EditorInputCapabilities.Readonly;
 
 		// Refresh dirty state when the confirm on kill setting is changed
 		this._configurationService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration(TerminalSettingId.ConfirmOnKill)) {
 				this._onDidChangeDirty.fire();
+			} else if (e.affectsConfiguration(TerminalSettingId.LockEditorGroup)) {
+				this._capabilities = _configurationService.getValue(TerminalSettingId.LockEditorGroup) ? (EditorInputCapabilities.Exclusive | EditorInputCapabilities.Readonly) : EditorInputCapabilities.Readonly;
 			}
 		});
 		if (_terminalInstance) {
