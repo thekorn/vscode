@@ -1344,4 +1344,72 @@ suite('EditorGroupsService', () => {
 		assert.strictEqual(firedCount, 0);
 		moveListener.dispose();
 	});
+
+	test('locked groups', async () => {
+		const [part] = await createPart();
+		const group = part.activeGroup;
+
+		const rightGroup = part.addGroup(group, GroupDirection.RIGHT);
+
+		let leftFiredCountFromPart = 0;
+		let rightFiredCountFromPart = 0;
+		const partListener = part.onDidChangeGroupLocked(g => {
+			if (g === group) {
+				leftFiredCountFromPart++;
+			} else if (g === rightGroup) {
+				rightFiredCountFromPart++;
+			}
+		});
+
+		let leftFiredCountFromGroup = 0;
+		const leftGroupListener = group.onDidGroupChange(e => {
+			if (e.kind === GroupChangeKind.GROUP_LOCKED) {
+				leftFiredCountFromGroup++;
+			}
+		});
+
+		let rightFiredCountFromGroup = 0;
+		const rightGroupListener = rightGroup.onDidGroupChange(e => {
+			if (e.kind === GroupChangeKind.GROUP_LOCKED) {
+				rightFiredCountFromGroup++;
+			}
+		});
+
+		rightGroup.setLocked(true);
+		rightGroup.setLocked(true);
+
+		assert.strictEqual(leftFiredCountFromGroup, 0);
+		assert.strictEqual(leftFiredCountFromPart, 0);
+		assert.strictEqual(rightFiredCountFromGroup, 1);
+		assert.strictEqual(rightFiredCountFromPart, 1);
+
+		rightGroup.setLocked(false);
+		rightGroup.setLocked(false);
+
+		assert.strictEqual(leftFiredCountFromGroup, 0);
+		assert.strictEqual(leftFiredCountFromPart, 0);
+		assert.strictEqual(rightFiredCountFromGroup, 2);
+		assert.strictEqual(rightFiredCountFromPart, 2);
+
+		group.setLocked(true);
+		group.setLocked(true);
+
+		assert.strictEqual(leftFiredCountFromGroup, 1);
+		assert.strictEqual(leftFiredCountFromPart, 1);
+		assert.strictEqual(rightFiredCountFromGroup, 2);
+		assert.strictEqual(rightFiredCountFromPart, 2);
+
+		group.setLocked(false);
+		group.setLocked(false);
+
+		assert.strictEqual(leftFiredCountFromGroup, 2);
+		assert.strictEqual(leftFiredCountFromPart, 2);
+		assert.strictEqual(rightFiredCountFromGroup, 2);
+		assert.strictEqual(rightFiredCountFromPart, 2);
+
+
+		partListener.dispose();
+		leftGroupListener.dispose();
+		rightGroupListener.dispose();
+	});
 });

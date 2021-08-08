@@ -505,6 +505,7 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 	private registerListeners(): void {
 
 		// Model Events
+		this._register(this.model.onDidChangeLocked(() => this.onDidChangeGroupLocked()));
 		this._register(this.model.onDidChangeEditorPinned(editor => this.onDidChangeEditorPinned(editor)));
 		this._register(this.model.onDidChangeEditorSticky(editor => this.onDidChangeEditorSticky(editor)));
 		this._register(this.model.onDidOpenEditor(editor => this.onDidOpenEditor(editor)));
@@ -519,6 +520,10 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 
 		// Visibility
 		this._register(this.accessor.onDidVisibilityChange(e => this.onDidVisibilityChange(e)));
+	}
+
+	private onDidChangeGroupLocked(): void {
+		this._onDidGroupChange.fire({ kind: GroupChangeKind.GROUP_LOCKED });
 	}
 
 	private onDidChangeEditorPinned(editor: EditorInput): void {
@@ -1720,6 +1725,18 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 
 			await openEditorResult;
 		}
+	}
+
+	//#endregion
+
+	//#region Locking
+
+	get isLocked(): boolean {
+		return this.model.isLocked;
+	}
+
+	setLocked(locked: boolean): void {
+		this.model.setLocked(locked);
 	}
 
 	//#endregion

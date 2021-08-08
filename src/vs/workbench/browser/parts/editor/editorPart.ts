@@ -98,6 +98,9 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 	private readonly _onDidChangeGroupIndex = this._register(new Emitter<IEditorGroupView>());
 	readonly onDidChangeGroupIndex = this._onDidChangeGroupIndex.event;
 
+	private readonly _onDidChangeGroupLocked = this._register(new Emitter<IEditorGroupView>());
+	readonly onDidChangeGroupLocked = this._onDidChangeGroupLocked.event;
+
 	private readonly _onDidActivateGroup = this._register(new Emitter<IEditorGroupView>());
 	readonly onDidActivateGroup = this._onDidActivateGroup.event;
 
@@ -542,6 +545,9 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 					break;
 				case GroupChangeKind.GROUP_INDEX:
 					this._onDidChangeGroupIndex.fire(groupView);
+					break;
+				case GroupChangeKind.GROUP_LOCKED:
+					this._onDidChangeGroupLocked.fire(groupView);
 					break;
 			}
 		}));
