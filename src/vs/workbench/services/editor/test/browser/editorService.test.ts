@@ -13,7 +13,7 @@ import { TextResourceEditorInput } from 'vs/workbench/common/editor/textResource
 import { EditorService } from 'vs/workbench/services/editor/browser/editorService';
 import { IEditorGroup, IEditorGroupsService, GroupDirection, GroupsArrangement } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { EditorPart } from 'vs/workbench/browser/parts/editor/editorPart';
-import { IEditorService, PreferredGroup, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
+import { ACTIVE_GROUP, IEditorService, PreferredGroup, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { FileEditorInput } from 'vs/workbench/contrib/files/browser/editors/fileEditorInput';
 import { UntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
@@ -71,7 +71,7 @@ suite('EditorService', () => {
 		return [part, editorService, instantiationService.createInstance(TestServiceAccessor)];
 	}
 
-	test('basics', async () => {
+	test('openEditor() - basics', async () => {
 		const [, service] = await createEditorService();
 
 		let input = new TestFileEditorInput(URI.parse('my://resource-basics'), TEST_EDITOR_INPUT_ID);
@@ -178,11 +178,98 @@ suite('EditorService', () => {
 		didCloseEditorListener.dispose();
 	});
 
-	test('openEditor()', () => {
+	test('openEditor() - locked groups', async () => {
+		const [part, service] = await createEditorService();
+
+		let input1 = new TestFileEditorInput(URI.parse('my://resource-basics'), TEST_EDITOR_INPUT_ID);
+		let input2 = new TestFileEditorInput(URI.parse('my://resource2-basics'), TEST_EDITOR_INPUT_ID);
+		let input3 = new TestFileEditorInput(URI.parse('my://resource3-basics'), TEST_EDITOR_INPUT_ID);
+		let input4 = new TestFileEditorInput(URI.parse('my://resource4-basics'), TEST_EDITOR_INPUT_ID);
+		let input5 = new TestFileEditorInput(URI.parse('my://resource5-basics'), TEST_EDITOR_INPUT_ID);
+		let input6 = new TestFileEditorInput(URI.parse('my://resource6-basics'), TEST_EDITOR_INPUT_ID);
+
+		let editor1 = await service.openEditor(input1, { pinned: true });
+		let editor2 = await service.openEditor(input2, { pinned: true }, SIDE_GROUP);
+
+		const group1 = editor1?.group;
+		assert.strictEqual(group1?.count, 1);
+
+		const group2 = editor2?.group;
+		assert.strictEqual(group2?.count, 1);
+
+		group2.setLocked(true);
+		part.activateGroup(group2.id);
+
+		// Will open in group 1 because group 2 is locked
+		await service.openEditor(input3, { pinned: true });
+
+		assert.strictEqual(group1.count, 2);
+		assert.strictEqual(group1.activeEditor, input3);
+		assert.strictEqual(group2.count, 1);
+
+		// Will open in group 2 because group was provided
+		await service.openEditor(input3, { pinned: true }, group2.id);
+
+		assert.strictEqual(group1.count, 2);
+		assert.strictEqual(group2.count, 2);
+		assert.strictEqual(group2.activeEditor, input3);
+
+		// Will reveal editor in group 2 because it is contained
+		await service.openEditor(input2, { pinned: true }, ACTIVE_GROUP);
+
+		assert.strictEqual(group1.count, 2);
+		assert.strictEqual(group2.count, 2);
+		assert.strictEqual(group2.activeEditor, input2);
+
+		// Will open a new group because side group is locked
+		part.activateGroup(group1.id);
+		let editor3 = await service.openEditor(input4, { pinned: true }, SIDE_GROUP);
+		assert.strictEqual(part.count, 3);
+
+		const group3 = editor3?.group;
+		assert.strictEqual(group3?.count, 1);
+
+		// Will reveal editor in group 2 because it is contained
+		// TODO@bpasero TODO@lramos15 this should not fail
+		// await service.openEditor(input3, { pinned: true }, SIDE_GROUP);
+		// assert.strictEqual(part.count, 3);
+		// assert.strictEqual(part.activeGroup, group2);
+
+		// Will open a new group if all groups are locked
+		group1.setLocked(true);
+		group2.setLocked(true);
+		group3.setLocked(true);
+
+		part.activateGroup(group1.id);
+		let editor5 = await service.openEditor(input5, { pinned: true });
+		const group4 = editor5?.group;
+		assert.strictEqual(group4?.count, 1);
+		assert.strictEqual(group4.activeEditor, input5);
+		assert.strictEqual(part.count, 4);
+
+		// Will open editor in most recently non-locked group
+		group1.setLocked(false);
+		group2.setLocked(false);
+		group3.setLocked(false);
+		group4.setLocked(false);
+
+		part.activateGroup(group3.id);
+		part.activateGroup(group2.id);
+		part.activateGroup(group4.id);
+		group4.setLocked(true);
+		group2.setLocked(true);
+
+		await service.openEditor(input6, { pinned: true });
+		assert.strictEqual(part.count, 4);
+		assert.strictEqual(part.activeGroup, group3);
+		assert.strictEqual(group3.activeEditor, input6);
+	});
+
+	test('openEditor() - untyped, typed', () => {
 		return testOpenEditors(false);
 	});
 
-	test('openEditors()', () => {
+	test('openEditors() - untyped, typed', () => {
 		return testOpenEditors(true);
 	});
 
