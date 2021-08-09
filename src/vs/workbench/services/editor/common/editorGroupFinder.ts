@@ -6,7 +6,7 @@
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { EditorActivation } from 'vs/platform/editor/common/editor';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { IEditorInput, IEditorInputWithOptions, isEditorInputWithOptions, IUntypedEditorInput } from 'vs/workbench/common/editor';
+import { IEditorInput, IEditorInputWithOptions, isEditorInput, isEditorInputWithOptions, IUntypedEditorInput } from 'vs/workbench/common/editor';
 import { IEditorGroup, GroupsOrder, preferredSideBySideGroupDirection, IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { PreferredGroup, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 
@@ -157,12 +157,25 @@ function doFindGroup(input: IEditorInputWithOptions | IUntypedEditorInput, prefe
 }
 
 function isGroupLockedForEditor(group: IEditorGroup, editor: IEditorInput | IUntypedEditorInput): boolean {
-	if (
-		group.isLocked &&		// only when group is locked
-		!group.contains(editor) // and when group does not yet contain editor
-	) {
-		return true;
+	if (!group.isLocked) {
+		// only relevant for locked editor groups
+		return false;
 	}
 
-	return false;
+	if (!isEditorInput(editor) && typeof editor.options?.override !== 'string') {
+		// we need either a typed editor or a untyped
+		// editor with specified editor override to
+		// do a proper `group.contains` check, so we
+		// return early if that is not the case
+		return false;
+	}
+
+	if (group.contains(editor)) {
+		// even though the group is locked, it contains
+		// the editor, so we allow to open the editor
+		return false;
+	}
+
+	// group is locked for this editor
+	return true;
 }
